@@ -212,11 +212,15 @@
                 this.currentTab = 'home';
                 this.showEventModal = false;
                 this.showSettingsModal = false;
+                this.showNotificationsModal = false;
                 this.editingEvent = null;
                 this.isDark = storage.get('darkMode', true);
                 this.backgroundImage = storage.get('backgroundImage', null);
                 this.userPhotos = [];
                 this.isFormActive = false; // Флаг активности формы
+                this.activeNotifications = storage.get('activeNotifications', []);
+                this.currentMonth = new Date().getMonth();
+                this.currentYear = new Date().getFullYear();
                 
                 this.eventForm = {
                     title: '',
@@ -230,6 +234,7 @@
                 this.loadUserPhotos();
                 this.render();
                 this.startTimer();
+                this.checkNotifications();
             }
 
             async loadUserPhotos() {
@@ -248,6 +253,11 @@
                     
                     // Обновляем только таймеры, не всю страницу
                     this.updateTimers();
+                    
+                    // Проверяем уведомления каждую минуту
+                    if (new Date().getSeconds() === 0) {
+                        this.checkNotifications();
+                    }
                 }, 1000);
             }
 
@@ -390,6 +400,138 @@
                 }
             }
 
+            // Функции для работы с уведомлениями
+            checkNotifications() {
+                const now = new Date();
+                const newNotifications = [];
+
+                this.events.forEach(event => {
+                    const eventDate = new Date(event.dateTime);
+                    const timeDiff = eventDate - now;
+                    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+                    // Проверяем уведомления за 3 дня
+                    if (daysDiff === 3) {
+                        const notificationId = `${event.id}-3days`;
+                        if (!this.activeNotifications.find(n => n.id === notificationId)) {
+                            newNotifications.push({
+                                id: notificationId,
+                                eventId: event.id,
+                                eventTitle: event.title,
+                                type: '3days',
+                                message: `До события "${event.title}" осталось 3 дня`,
+                                createdAt: new Date().toISOString(),
+                                read: false
+                            });
+                        }
+                    }
+
+                    // Проверяем уведомления за 1 день
+                    if (daysDiff === 1) {
+                        const notificationId = `${event.id}-1day`;
+                        if (!this.activeNotifications.find(n => n.id === notificationId)) {
+                            newNotifications.push({
+                                id: notificationId,
+                                eventId: event.id,
+                                eventTitle: event.title,
+                                type: '1day',
+                                message: `До события "${event.title}" осталось 1 день`,
+                                createdAt: new Date().toISOString(),
+                                read: false
+                            });
+                        }
+                    }
+
+                    // Проверяем уведомления в день события
+                    if (daysDiff === 0 && timeDiff > 0) {
+                        const notificationId = `${event.id}-today`;
+                        if (!this.activeNotifications.find(n => n.id === notificationId)) {
+                            newNotifications.push({
+                                id: notificationId,
+                                eventId: event.id,
+                                eventTitle: event.title,
+                                type: 'today',
+                                message: `Сегодня: "${event.title}"`,
+                                createdAt: new Date().toISOString(),
+                                read: false
+                            });
+                        }
+                    }
+                });
+
+                if (newNotifications.length > 0) {
+                    this.activeNotifications = [...this.activeNotifications, ...newNotifications];
+                    storage.set('activeNotifications', this.activeNotifications);
+                    
+                    // Показываем браузерное уведомление если разрешено
+                    if (Notification.permission === 'granted') {
+                        newNotifications.forEach(notification => {
+                            new Notification('MX Напоминалка', {
+                                body: notification.message,
+                                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B5CF6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
+                            });
+                        });
+                    }
+                }
+            }
+
+            markNotificationAsRead(notificationId) {
+                this.activeNotifications = this.activeNotifications.map(notification =>
+                    notification.id === notificationId ? { ...notification, read: true } : notification
+                );
+                storage.set('activeNotifications', this.activeNotifications);
+                this.render();
+            }
+
+            deleteNotification(notificationId) {
+                this.activeNotifications = this.activeNotifications.filter(n => n.id !== notificationId);
+                storage.set('activeNotifications', this.activeNotifications);
+                this.render();
+            }
+
+            getUnreadNotificationsCount() {
+                return this.activeNotifications.filter(n => !n.read).length;
+            }
+
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+
+            // Функции для календаря
+            getDaysInMonth(year, month) {
+                return new Date(year, month + 1, 0).getDate();
+            }
+
+            getFirstDayOfMonth(year, month) {
+                return new Date(year, month, 1).getDay();
+            }
+
+            getEventsForDate(date) {
+                const dateStr = date.toISOString().split('T')[0];
+                return this.events.filter(event => event.dateTime.split('T')[0] === dateStr);
+            }
+
+            changeMonth(direction) {
+                if (direction === 'prev') {
+                    if (this.currentMonth === 0) {
+                        this.currentMonth = 11;
+                        this.currentYear--;
+                    } else {
+                        this.currentMonth--;
+                    }
+                } else {
+                    if (this.currentMonth === 11) {
+                        this.currentMonth = 0;
+                        this.currentYear++;
+                    } else {
+                        this.currentMonth++;
+                    }
+                }
+                this.render();
+            }
+
             renderTimerDisplay(event) {
                 return `<div data-timer-event="${event.id}">${this.renderTimerDisplayOnly(event)}</div>`;
             }
@@ -452,7 +594,7 @@
                                 <div class="flex items-center gap-3">
                                     <i data-lucide="clock" class="w-8 h-8 text-purple-400"></i>
                                     <h1 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                                        Event Timer
+                                        MX Напоминалка 
                                     </h1>
                                 </div>
                                 
@@ -462,6 +604,14 @@
                                     </button>
                                     <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="image" class="w-5 h-5"></i>
+                                    </button>
+                                    <button onclick="app.showNotificationsModal = true; app.requestNotificationPermission(); app.render();" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                        <i data-lucide="bell" class="w-5 h-5"></i>
+                                        ${this.getUnreadNotificationsCount() > 0 ? `
+                                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                ${this.getUnreadNotificationsCount()}
+                                            </span>
+                                        ` : ''}
                                     </button>
                                 </div>
                             </div>
@@ -510,7 +660,7 @@
                         return `
                             <div class="p-4 space-y-6 overflow-y-auto h-full pb-20">
                                 <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                    <h2 class="text-2xl font-bold mb-2">Добро пожаловать! 👋</h2>
+                                    <h2 class="text-2xl font-bold mb-2">ДиманаЧ! 👋</h2>
                                     <p class="opacity-80">У вас ${this.events.length} событий, ${upcomingEvents.length} предстоящих</p>
                                 </div>
 
@@ -623,7 +773,7 @@
                                     </h2>
                                     <label class="p-2 rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors cursor-pointer">
                                         <i data-lucide="plus" class="w-5 h-5"></i>
-                                        <input type="file" accept="image/*" class="hidden" onchange="app.handleFileSelect(event)">
+                                        <input type="file" accept="image/*" class="hidden" onchange="app.handleFileUpload(event)">
                                     </label>
                                 </div>
 
@@ -680,10 +830,132 @@
                                         <p class="opacity-70 mb-4">Добавьте свои фотографии для фона</p>
                                         <label class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer inline-block">
                                             Загрузить фото
-                                            <input type="file" accept="image/*" class="hidden" onchange="app.handleFileSelect(event)">
+                                            <input type="file" accept="image/*" class="hidden" onchange="app.handleFileUpload(event)">
                                         </label>
                                     </div>
                                 `}
+                            </div>
+                        `;
+
+                    case 'calendar':
+                        const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                        const daysInMonth = this.getDaysInMonth(this.currentYear, this.currentMonth);
+                        const firstDay = this.getFirstDayOfMonth(this.currentYear, this.currentMonth);
+                        
+                        let calendarDays = [];
+                        
+                        // Пустые ячейки для начала месяца
+                        for (let i = 0; i < firstDay; i++) {
+                            calendarDays.push('');
+                        }
+                        
+                        // Дни месяца
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const date = new Date(this.currentYear, this.currentMonth, day);
+                            const events = this.getEventsForDate(date);
+                            calendarDays.push({ day, date, events });
+                        }
+
+                        return `
+                            <div class="p-4 space-y-4 overflow-y-auto h-full pb-20">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-xl font-bold flex items-center gap-2">
+                                        <i data-lucide="calendar" class="w-6 h-6 text-purple-400"></i>
+                                        Календарь событий
+                                    </h2>
+                                </div>
+
+                                <div class="p-4 rounded-2xl border ${cardClasses} backdrop-blur-lg">
+                                    <!-- Заголовок календаря -->
+                                    <div class="flex items-center justify-between mb-4">
+                                        <button onclick="app.changeMonth('prev')" class="p-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                                        </button>
+                                        <h3 class="text-lg font-semibold">
+                                            ${monthNames[this.currentMonth]} ${this.currentYear}
+                                        </h3>
+                                        <button onclick="app.changeMonth('next')" class="p-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Дни недели -->
+                                    <div class="grid grid-cols-7 gap-1 mb-2">
+                                        ${dayNames.map(day => `
+                                            <div class="text-center text-sm font-medium p-2 opacity-70">
+                                                ${day}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+
+                                    <!-- Календарная сетка -->
+                                    <div class="grid grid-cols-7 gap-1">
+                                        ${calendarDays.map(dayData => {
+                                            if (!dayData) {
+                                                return '<div class="aspect-square"></div>';
+                                            }
+                                            
+                                            const { day, date, events } = dayData;
+                                            const isToday = date.toDateString() === new Date().toDateString();
+                                            const hasEvents = events.length > 0;
+                                            
+                                            return `
+                                                <div class="aspect-square p-1">
+                                                    <div class="w-full h-full rounded-lg border transition-all ${
+                                                        isToday ? 'bg-purple-500 text-white border-purple-400' : 
+                                                        hasEvents ? 'bg-purple-500/20 border-purple-400/50 text-purple-300' :
+                                                        'border-gray-600/30 hover:border-purple-400/30'
+                                                    } flex flex-col items-center justify-center text-sm relative">
+                                                        <span class="font-medium">${day}</span>
+                                                        ${hasEvents ? `
+                                                            <div class="flex gap-1 mt-1">
+                                                                ${events.slice(0, 3).map(() => `
+                                                                    <div class="w-1 h-1 rounded-full bg-current opacity-80"></div>
+                                                                `).join('')}
+                                                                ${events.length > 3 ? `<div class="text-xs">+</div>` : ''}
+                                                            </div>
+                                                        ` : ''}
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+
+                                <!-- События выбранного дня -->
+                                ${(() => {
+                                    const today = new Date();
+                                    const todayEvents = this.getEventsForDate(today);
+                                    
+                                    if (todayEvents.length > 0) {
+                                        return `
+                                            <div class="space-y-3">
+                                                <h3 class="text-lg font-semibold">События на сегодня</h3>
+                                                ${todayEvents.map(event => `
+                                                    <div class="p-3 rounded-xl border ${cardClasses} backdrop-blur-lg">
+                                                        <div class="flex items-center justify-between">
+                                                            <div>
+                                                                <h4 class="font-semibold">${event.title}</h4>
+                                                                <p class="text-sm opacity-70">
+                                                                    ${new Date(event.dateTime).toLocaleTimeString('ru-RU', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                            <button onclick="app.startEditEvent('${event.id}')" class="p-2 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors">
+                                                                <i data-lucide="edit" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        `;
+                                    }
+                                    return '';
+                                })()}
                             </div>
                         `;
 
@@ -771,6 +1043,122 @@
                     `;
                 }
 
+                // Модальное окно уведомлений
+                if (this.showNotificationsModal) {
+                    modals += `
+                        <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                            <div class="w-full max-w-md max-h-[80vh] overflow-hidden p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h3 class="text-xl font-bold flex items-center gap-2">
+                                        <i data-lucide="bell" class="w-6 h-6 text-purple-400"></i>
+                                        Уведомления
+                                    </h3>
+                                    <button onclick="app.showNotificationsModal = false; app.render();" class="p-2 rounded-full hover:bg-purple-500/20 transition-colors">
+                                        <i data-lucide="x" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
+
+                                <div class="space-y-4 overflow-y-auto max-h-96">
+                                    ${Notification.permission === 'default' ? `
+                                        <div class="p-4 rounded-xl bg-blue-500/20 border border-blue-400/30">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="info" class="w-5 h-5 text-blue-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-blue-300">Разрешите уведомления</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, разрешите их в браузере</p>
+                                                    <button onclick="app.requestNotificationPermission()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                                                        Разрешить
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    ${Notification.permission === 'denied' ? `
+                                        <div class="p-4 rounded-xl bg-red-500/20 border border-red-400/30">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-red-300">Уведомления заблокированы</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Разрешите уведомления в настройках браузера для получения напоминаний</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    ${this.activeNotifications.length === 0 ? `
+                                        <div class="text-center py-8">
+                                            <i data-lucide="bell-off" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                                            <h4 class="text-lg font-semibold mb-2">Нет уведомлений</h4>
+                                            <p class="text-sm opacity-70">Уведомления появятся за 3 дня и 1 день до ваших событий</p>
+                                        </div>
+                                    ` : `
+                                        <div class="space-y-3">
+                                            ${this.activeNotifications
+                                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                                                .map(notification => `
+                                                    <div class="p-3 rounded-xl border ${notification.read ? 'bg-gray-500/10 border-gray-500/30' : 'bg-purple-500/20 border-purple-400/30'} transition-all">
+                                                        <div class="flex items-start gap-3">
+                                                            <div class="flex-1">
+                                                                <div class="flex items-center gap-2 mb-1">
+                                                                    ${notification.type === '3days' ? `<i data-lucide="calendar" class="w-4 h-4 text-orange-400"></i>` : 
+                                                                      notification.type === '1day' ? `<i data-lucide="clock" class="w-4 h-4 text-yellow-400"></i>` :
+                                                                      `<i data-lucide="bell-ring" class="w-4 h-4 text-red-400"></i>`}
+                                                                    <span class="text-sm font-medium ${notification.read ? 'opacity-70' : ''}">${notification.eventTitle}</span>
+                                                                    ${!notification.read ? `<div class="w-2 h-2 bg-purple-400 rounded-full"></div>` : ''}
+                                                                </div>
+                                                                <p class="text-sm ${notification.read ? 'opacity-50' : 'opacity-80'}">${notification.message}</p>
+                                                                <p class="text-xs opacity-50 mt-1">
+                                                                    ${new Date(notification.createdAt).toLocaleDateString('ru-RU', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                            <div class="flex flex-col gap-1">
+                                                                ${!notification.read ? `
+                                                                    <button onclick="app.markNotificationAsRead('${notification.id}')" class="p-1.5 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors">
+                                                                        <i data-lucide="check" class="w-3 h-3"></i>
+                                                                    </button>
+                                                                ` : ''}
+                                                                <button onclick="app.deleteNotification('${notification.id}')" class="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors">
+                                                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                        </div>
+                                    `}
+
+                                    <div class="pt-4 border-t border-purple-500/30">
+                                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                                            <i data-lucide="settings" class="w-5 h-5 text-purple-400"></i>
+                                            Настройки уведомлений
+                                        </h4>
+                                        <div class="space-y-2 text-sm opacity-80">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                                                <span>За 3 дня до события</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                                                <span>За 1 день до события</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                                                <span>В день события</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 return modals;
             }
 
@@ -781,6 +1169,11 @@
                 this.editingEvent = null;
                 this.resetForm();
                 storage.set('tempEventForm', null); // Очищаем временную форму
+                this.render();
+            }
+
+            closeNotificationsModal() {
+                this.showNotificationsModal = false;
                 this.render();
             }
 
@@ -851,6 +1244,15 @@
                     this.handlePhotoUpload(file);
                 }
                 event.target.value = ''; // Сброс input для возможности загрузки того же файла повторно
+            }
+
+            // Добавляем недостающий обработчик
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    this.handlePhotoUpload(file);
+                }
+                event.target.value = '';
             }
         }
 
