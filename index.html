@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event mer - Отслеживание событий</title>
+    <title>Event Timer - Отслеживание событий</title>
     <meta name="theme-color" content="#8B5CF6">
     <meta name="description" content="Мобильное приложение для отслеживания событий с таймерами обратного отсчета">
     
@@ -242,8 +242,21 @@
 
             startTimer() {
                 setInterval(() => {
-                    this.render();
+                    // Обновляем только таймеры, не всю страницу
+                    this.updateTimers();
                 }, 1000);
+            }
+
+            updateTimers() {
+                // Обновляем только элементы с таймерами, избегая полного ререндера
+                const timerElements = document.querySelectorAll('[data-timer-event]');
+                timerElements.forEach(element => {
+                    const eventId = element.getAttribute('data-timer-event');
+                    const event = this.events.find(e => e.id == eventId);
+                    if (event) {
+                        element.innerHTML = this.renderTimerDisplayOnly(event);
+                    }
+                });
             }
 
             calculateTimeLeft(eventDate) {
@@ -372,6 +385,10 @@
             }
 
             renderTimerDisplay(event) {
+                return `<div data-timer-event="${event.id}">${this.renderTimerDisplayOnly(event)}</div>`;
+            }
+
+            renderTimerDisplayOnly(event) {
                 const timeLeft = this.calculateTimeLeft(event.dateTime);
                 
                 if (timeLeft.expired) {
@@ -487,7 +504,7 @@
                         return `
                             <div class="p-4 space-y-6 overflow-y-auto h-full pb-20">
                                 <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                    <h2 class="text-2xl font-bold mb-2">Привет ДиманаЧ! 👋</h2>
+                                    <h2 class="text-2xl font-bold mb-2">Добро пожаловать! 👋</h2>
                                     <p class="opacity-80">У вас ${this.events.length} событий, ${upcomingEvents.length} предстоящих</p>
                                 </div>
 
@@ -683,7 +700,7 @@
                 if (this.showEventModal) {
                     modals += `
                         <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                            <div class="w-full max-w-md p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
+                            <div class="w-full max-w-md p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg modal-form">
                                 <div class="flex items-center justify-between mb-6">
                                     <h3 class="text-xl font-bold">
                                         ${this.editingEvent ? 'Редактировать событие' : 'Новое событие'}
@@ -748,6 +765,7 @@
                 this.showEventModal = false;
                 this.editingEvent = null;
                 this.resetForm();
+                storage.set('tempEventForm', null); // Очищаем временную форму
                 this.render();
             }
 
@@ -763,6 +781,8 @@
                         color: event.color || '#8B5CF6',
                         notifications: event.notifications || []
                     };
+                    // Сохраняем форму для восстановления
+                    storage.set('tempEventForm', this.eventForm);
                     this.showEventModal = true;
                     this.render();
                 }
@@ -770,11 +790,19 @@
 
             updateEventForm(field, value) {
                 this.eventForm[field] = value;
-                // Не вызываем render() чтобы не закрывать клавиатуру
+                // Сохраняем в localStorage для надежности
+                const tempForm = { ...this.eventForm };
+                storage.set('tempEventForm', tempForm);
             }
 
             saveEvent() {
-                // Дополнительно получаем значения из полей формы на случай если updateEventForm не сработал
+                // Восстанавливаем форму из localStorage если потеряли данные
+                const tempForm = storage.get('tempEventForm');
+                if (tempForm) {
+                    this.eventForm = { ...this.eventForm, ...tempForm };
+                }
+
+                // Дополнительно получаем значения из полей формы
                 const titleEl = document.getElementById('eventTitle');
                 const dateEl = document.getElementById('eventDate');
                 const timeEl = document.getElementById('eventTime');
@@ -784,6 +812,9 @@
                 if (dateEl) this.eventForm.date = dateEl.value;
                 if (timeEl) this.eventForm.time = timeEl.value;
                 if (descEl) this.eventForm.description = descEl.value;
+
+                // Очищаем временную форму
+                storage.set('tempEventForm', null);
 
                 if (this.editingEvent) {
                     this.editEvent();
@@ -803,6 +834,28 @@
 
         // Создаем глобальный экземпляр приложения
         window.app = new EventTimerApp();
+
+        // Добавляем обработчик для предотвращения потери фокуса
+        document.addEventListener('focusout', (e) => {
+            // Если фокус уходит с поля ввода в модальном окне
+            if (e.target && e.target.closest && e.target.closest('.modal-form')) {
+                setTimeout(() => {
+                    // Восстанавливаем значения полей из localStorage если они потерялись
+                    const tempForm = storage.get('tempEventForm');
+                    if (tempForm) {
+                        const titleEl = document.getElementById('eventTitle');
+                        const dateEl = document.getElementById('eventDate');
+                        const timeEl = document.getElementById('eventTime');
+                        const descEl = document.getElementById('eventDescription');
+                        
+                        if (titleEl && !titleEl.value && tempForm.title) titleEl.value = tempForm.title;
+                        if (dateEl && !dateEl.value && tempForm.date) dateEl.value = tempForm.date;
+                        if (timeEl && !timeEl.value && tempForm.time) timeEl.value = tempForm.time;
+                        if (descEl && !descEl.value && tempForm.description) descEl.value = tempForm.description;
+                    }
+                }, 100);
+            }
+        });
     </script>
 </body>
 </html>
