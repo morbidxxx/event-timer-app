@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Timer - Отслеживание событий</title>
+    <title>Event mer - Отслеживание событий</title>
     <meta name="theme-color" content="#8B5CF6">
     <meta name="description" content="Мобильное приложение для отслеживания событий с таймерами обратного отсчета">
     
@@ -335,6 +335,12 @@
                 storage.set('backgroundImage', imageUrl);
                 this.render();
             }
+            
+            setBackgroundGradient(gradient) {
+                this.backgroundImage = gradient;
+                storage.set('backgroundImage', gradient);
+                this.render();
+            }
 
             async handlePhotoUpload(file) {
                 try {
@@ -406,7 +412,9 @@
                 const textClasses = this.isDark ? 'text-white' : 'text-gray-900';
 
                 const backgroundStyle = this.backgroundImage 
-                    ? `background-image: url('${this.backgroundImage}'); background-size: cover; background-position: center; background-attachment: fixed;`
+                    ? (this.backgroundImage.startsWith('linear-gradient') 
+                        ? `background: ${this.backgroundImage};`
+                        : `background-image: url('${this.backgroundImage}'); background-size: cover; background-position: center; background-attachment: fixed;`)
                     : '';
 
                 const upcomingEvents = this.getUpcomingEvents();
@@ -429,8 +437,8 @@
                                     <button onclick="app.setTheme(!app.isDark)" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="palette" class="w-5 h-5"></i>
                                     </button>
-                                    <button onclick="app.showSettingsModal = true; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
-                                        <i data-lucide="settings" class="w-5 h-5"></i>
+                                    <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                        <i data-lucide="image" class="w-5 h-5"></i>
                                     </button>
                                 </div>
                             </div>
@@ -479,7 +487,7 @@
                         return `
                             <div class="p-4 space-y-6 overflow-y-auto h-full pb-20">
                                 <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                    <h2 class="text-2xl font-bold mb-2">Привет ДиманыЧ! 👋</h2>
+                                    <h2 class="text-2xl font-bold mb-2">Привет ДиманаЧ! 👋</h2>
                                     <p class="opacity-80">У вас ${this.events.length} событий, ${upcomingEvents.length} предстоящих</p>
                                 </div>
 
@@ -601,15 +609,15 @@
                                     <h3 class="text-lg font-semibold">Готовые фоны</h3>
                                     <div class="photo-grid">
                                         ${[
-                                            { id: 'gradient1', name: 'Фиолетовый градиент', style: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);' },
-                                            { id: 'gradient2', name: 'Розовый закат', style: 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);' },
-                                            { id: 'gradient3', name: 'Океан', style: 'background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);' },
-                                            { id: 'gradient4', name: 'Лес', style: 'background: linear-gradient(135deg, #74b9ff 0%, #55a3ff 100%);' },
-                                            { id: 'none', name: 'Без фона', style: 'background: #374151; border: 2px dashed #9CA3AF;' }
+                                            { id: 'gradient1', name: 'Фиолетовый градиент', style: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+                                            { id: 'gradient2', name: 'Розовый закат', style: 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+                                            { id: 'gradient3', name: 'Океан', style: 'background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);', value: 'linear-gradient(135deg, #667db6 0%, #0082c8 100%)' },
+                                            { id: 'gradient4', name: 'Лес', style: 'background: linear-gradient(135deg, #74b9ff 0%, #55a3ff 100%);', value: 'linear-gradient(135deg, #74b9ff 0%, #55a3ff 100%)' },
+                                            { id: 'none', name: 'Без фона', style: 'background: #374151; border: 2px dashed #9CA3AF;', value: null }
                                         ].map(bg => `
                                             <div class="relative">
-                                                <div onclick="app.setBackgroundImage(${bg.id === 'none' ? 'null' : `'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">' + (bg.id === 'gradient1' ? '<stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#764ba2"/>' : bg.id === 'gradient2' ? '<stop offset="0%" stop-color="#f093fb"/><stop offset="100%" stop-color="#f5576c"/>' : bg.id === 'gradient3' ? '<stop offset="0%" stop-color="#667db6"/><stop offset="100%" stop-color="#0082c8"/>' : '<stop offset="0%" stop-color="#74b9ff"/><stop offset="100%" stop-color="#55a3ff"/>') + '</linearGradient></defs><rect width="100%" height="100%" fill="url(#grad)"/></svg>')`})" 
-                                                     class="photo-preview rounded-lg border-2 ${this.backgroundImage === (bg.id === 'none' ? null : 'gradient') ? 'border-purple-400' : 'border-gray-300'} flex items-center justify-center text-sm font-medium" 
+                                                <div onclick="app.setBackgroundImage(${bg.value ? `'${bg.value}'` : 'null'})" 
+                                                     class="photo-preview rounded-lg border-2 ${this.backgroundImage === bg.value ? 'border-purple-400' : 'border-gray-300'} flex items-center justify-center text-sm font-medium cursor-pointer hover:border-purple-300 transition-colors" 
                                                      style="${bg.style} height: 80px;">
                                                     ${bg.id === 'none' ? 'Без фона' : bg.name}
                                                 </div>
@@ -688,24 +696,34 @@
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Название события</label>
-                                        <input type="text" id="eventTitle" value="${this.eventForm.title}" placeholder="Введите название..." class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                        <input type="text" id="eventTitle" value="${this.eventForm.title}" placeholder="Введите название..." 
+                                               onchange="app.updateEventForm('title', this.value)" 
+                                               oninput="app.updateEventForm('title', this.value)"
+                                               class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium mb-2">Дата</label>
-                                            <input type="date" id="eventDate" value="${this.eventForm.date}" class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                            <input type="date" id="eventDate" value="${this.eventForm.date}"
+                                                   onchange="app.updateEventForm('date', this.value)"
+                                                   class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                         </div>
 
                                         <div>
                                             <label class="block text-sm font-medium mb-2">Время</label>
-                                            <input type="time" id="eventTime" value="${this.eventForm.time}" class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                            <input type="time" id="eventTime" value="${this.eventForm.time}"
+                                                   onchange="app.updateEventForm('time', this.value)"
+                                                   class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                         </div>
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Описание (необязательно)</label>
-                                        <textarea id="eventDescription" placeholder="Добавьте описание..." rows="3" class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none">${this.eventForm.description}</textarea>
+                                        <textarea id="eventDescription" placeholder="Добавьте описание..." rows="3" 
+                                                  onchange="app.updateEventForm('description', this.value)"
+                                                  oninput="app.updateEventForm('description', this.value)"
+                                                  class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none">${this.eventForm.description}</textarea>
                                     </div>
 
                                     <div class="flex gap-3 pt-4">
@@ -750,12 +768,22 @@
                 }
             }
 
+            updateEventForm(field, value) {
+                this.eventForm[field] = value;
+                // Не вызываем render() чтобы не закрывать клавиатуру
+            }
+
             saveEvent() {
-                // Получаем значения из полей формы
-                this.eventForm.title = document.getElementById('eventTitle').value;
-                this.eventForm.date = document.getElementById('eventDate').value;
-                this.eventForm.time = document.getElementById('eventTime').value;
-                this.eventForm.description = document.getElementById('eventDescription').value;
+                // Дополнительно получаем значения из полей формы на случай если updateEventForm не сработал
+                const titleEl = document.getElementById('eventTitle');
+                const dateEl = document.getElementById('eventDate');
+                const timeEl = document.getElementById('eventTime');
+                const descEl = document.getElementById('eventDescription');
+                
+                if (titleEl) this.eventForm.title = titleEl.value;
+                if (dateEl) this.eventForm.date = dateEl.value;
+                if (timeEl) this.eventForm.time = timeEl.value;
+                if (descEl) this.eventForm.description = descEl.value;
 
                 if (this.editingEvent) {
                     this.editEvent();
