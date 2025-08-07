@@ -216,6 +216,7 @@
                 this.isDark = storage.get('darkMode', true);
                 this.backgroundImage = storage.get('backgroundImage', null);
                 this.userPhotos = [];
+                this.isFormActive = false; // Флаг активности формы
                 
                 this.eventForm = {
                     title: '',
@@ -242,6 +243,9 @@
 
             startTimer() {
                 setInterval(() => {
+                    // Если форма активна, не обновляем ничего
+                    if (this.isFormActive) return;
+                    
                     // Обновляем только таймеры, не всю страницу
                     this.updateTimers();
                 }, 1000);
@@ -297,6 +301,7 @@
                 storage.set('events', this.events);
                 this.resetForm();
                 this.showEventModal = false;
+                this.isFormActive = false; // Деактивируем форму
                 this.render();
             }
 
@@ -317,6 +322,7 @@
                 this.resetForm();
                 this.showEventModal = false;
                 this.editingEvent = null;
+                this.isFormActive = false; // Деактивируем форму
                 this.render();
             }
 
@@ -486,7 +492,7 @@
                             
                             <!-- Плавающая кнопка добавления -->
                             ${this.currentTab !== 'events' && this.currentTab !== 'photos' ? `
-                                <button onclick="app.showEventModal = true; app.render();" class="fixed bottom-20 right-4 w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 z-40">
+                                <button onclick="app.openNewEventModal();" class="fixed bottom-20 right-4 w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 z-40">
                                     <i data-lucide="plus" class="w-6 h-6"></i>
                                 </button>
                             ` : ''}
@@ -541,7 +547,7 @@
                                         <i data-lucide="calendar" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
                                         <h3 class="text-xl font-semibold mb-2">Нет предстоящих событий</h3>
                                         <p class="opacity-70 mb-4">Добавьте свое первое событие!</p>
-                                        <button onclick="app.showEventModal = true; app.render();" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                        <button onclick="app.openNewEventModal();" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                                             Добавить событие
                                         </button>
                                     </div>
@@ -557,7 +563,7 @@
                                         <i data-lucide="list" class="w-6 h-6 text-purple-400"></i>
                                         Все события (${this.events.length})
                                     </h2>
-                                    <button onclick="app.showEventModal = true; app.render();" class="p-2 rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors">
+                                    <button onclick="app.openNewEventModal();" class="p-2 rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors">
                                         <i data-lucide="plus" class="w-5 h-5"></i>
                                     </button>
                                 </div>
@@ -714,6 +720,8 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Название события</label>
                                         <input type="text" id="eventTitle" value="${this.eventForm.title}" placeholder="Введите название..." 
+                                               onfocus="app.isFormActive = true"
+                                               onblur="setTimeout(() => app.isFormActive = false, 100)"
                                                onchange="app.updateEventForm('title', this.value)" 
                                                oninput="app.updateEventForm('title', this.value)"
                                                class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
@@ -723,6 +731,8 @@
                                         <div>
                                             <label class="block text-sm font-medium mb-2">Дата</label>
                                             <input type="date" id="eventDate" value="${this.eventForm.date}"
+                                                   onfocus="app.isFormActive = true"
+                                                   onblur="setTimeout(() => app.isFormActive = false, 100)"
                                                    onchange="app.updateEventForm('date', this.value)"
                                                    class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                         </div>
@@ -730,6 +740,8 @@
                                         <div>
                                             <label class="block text-sm font-medium mb-2">Время</label>
                                             <input type="time" id="eventTime" value="${this.eventForm.time}"
+                                                   onfocus="app.isFormActive = true"
+                                                   onblur="setTimeout(() => app.isFormActive = false, 100)"
                                                    onchange="app.updateEventForm('time', this.value)"
                                                    class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                         </div>
@@ -738,6 +750,8 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Описание (необязательно)</label>
                                         <textarea id="eventDescription" placeholder="Добавьте описание..." rows="3" 
+                                                  onfocus="app.isFormActive = true"
+                                                  onblur="setTimeout(() => app.isFormActive = false, 100)"
                                                   onchange="app.updateEventForm('description', this.value)"
                                                   oninput="app.updateEventForm('description', this.value)"
                                                   class="w-full p-3 rounded-xl border ${this.isDark ? 'bg-gray-800/50 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none">${this.eventForm.description}</textarea>
@@ -762,6 +776,7 @@
 
             // Методы для работы с модальными окнами
             closeEventModal() {
+                this.isFormActive = false; // Деактивируем форму
                 this.showEventModal = false;
                 this.editingEvent = null;
                 this.resetForm();
@@ -784,8 +799,15 @@
                     // Сохраняем форму для восстановления
                     storage.set('tempEventForm', this.eventForm);
                     this.showEventModal = true;
+                    this.isFormActive = true; // Активируем форму
                     this.render();
                 }
+            }
+
+            openNewEventModal() {
+                this.showEventModal = true;
+                this.isFormActive = true; // Активируем форму
+                this.render();
             }
 
             updateEventForm(field, value) {
