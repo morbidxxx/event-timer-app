@@ -580,23 +580,31 @@
             }
 
             requestNotificationPermission() {
-                if ('Notification' in window && Notification.permission === 'default') {
+                if ('Notification' in window) {
                     Notification.requestPermission().then(permission => {
+                        console.log('Разрешение на уведомления:', permission);
                         if (permission === 'granted') {
-                            try {
-                                new Notification('Event Timer', {
-                                    body: 'Уведомления успешно включены!',
-                                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B5CF6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
-                                });
-                            } catch (notificationError) {
-                                console.warn('Ошибка показа тестового уведомления:', notificationError);
-                            }
+                            // Показываем тестовое уведомление
+                            setTimeout(() => {
+                                try {
+                                    new Notification('Event Timer ✅', {
+                                        body: 'Уведомления успешно включены! Теперь вы будете получать напоминания о событиях.',
+                                        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnoiIGZpbGw9IiM4QjVDRjYiLz4KPHBhdGggZD0iTTkgMTJsMS41IDEuNUwxNSA5IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz4KPC9zdmc+',
+                                        tag: 'event-timer-test',
+                                        requireInteraction: false
+                                    });
+                                } catch (error) {
+                                    console.log('Тестовое уведомление не удалось показать:', error);
+                                }
+                            }, 500);
                         }
                         this.render();
                     }).catch(error => {
-                        console.error('Ошибка запроса разрешения:', error);
+                        console.error('Ошибка при запросе разрешений:', error);
                         this.render();
                     });
+                } else {
+                    console.log('Браузер не поддерживает уведомления');
                 }
             }
 
@@ -706,7 +714,7 @@
                                     <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="image" class="w-5 h-5"></i>
                                     </button>
-                                    <button onclick="app.showNotificationsModal = true; app.render();" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                    <button onclick="app.toggleNotificationsModal()" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="bell" class="w-5 h-5"></i>
                                         ${this.getUnreadNotificationsCount() > 0 ? `
                                             <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -1188,7 +1196,7 @@
                                         <i data-lucide="bell" class="w-6 h-6 text-purple-400"></i>
                                         Уведомления
                                     </h3>
-                                    <button onclick="app.showNotificationsModal = false; app.render();" class="p-2 rounded-full hover:bg-purple-500/20 transition-colors">
+                                    <button onclick="app.toggleNotificationsModal()" class="p-2 rounded-full hover:bg-purple-500/20 transition-colors">
                                         <i data-lucide="x" class="w-5 h-5"></i>
                                     </button>
                                 </div>
@@ -1213,6 +1221,9 @@
                                                     <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, нажмите "Разрешить"</p>
                                                     <button onclick="app.requestNotificationPermission()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
                                                         Разрешить уведомления
+                                                    </button>
+                                                    <button onclick="app.testNotification()" class="mt-2 px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors ml-2">
+                                                        Тест
                                                     </button>
                                                 </div>
                                             </div>
@@ -1343,13 +1354,20 @@
             openNotificationsModal() {
                 this.showNotificationsModal = true;
                 this.render();
+            }
+
+            toggleNotificationsModal() {
+                this.showNotificationsModal = !this.showNotificationsModal;
+                this.render();
                 
-                // Автоматически запрашиваем разрешения если они не настроены
-                setTimeout(() => {
-                    if ('Notification' in window && Notification.permission === 'default') {
-                        this.requestNotificationPermission();
-                    }
-                }, 200);
+                // Если модальное окно открывается, запрашиваем разрешения
+                if (this.showNotificationsModal) {
+                    setTimeout(() => {
+                        if ('Notification' in window && Notification.permission === 'default') {
+                            this.requestNotificationPermission();
+                        }
+                    }, 300);
+                }
             }
 
             startEditEvent(eventId) {
@@ -1417,6 +1435,21 @@
                 if (this.editingEvent && confirm('Вы уверены, что хотите удалить это событие?')) {
                     this.deleteEvent(this.editingEvent.id);
                     this.closeEventModal();
+                }
+            }
+
+            testNotification() {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Event Timer - Тест 🔔', {
+                        body: 'Это тестовое уведомление! Уведомления работают корректно.',
+                        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnoiIGZpbGw9IiM4QjVDRjYiLz4KPHBhdGggZD0iTTkgMTJsMS41IDEuNUwxNSA5IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz4KPC9zdmc+',
+                        tag: 'event-timer-test-manual',
+                        requireInteraction: false
+                    });
+                } else if (Notification.permission === 'default') {
+                    alert('Сначала разрешите уведомления в браузере!');
+                } else {
+                    alert('Уведомления заблокированы в настройках браузера. Разблокируйте их вручную.');
                 }
             }
 
