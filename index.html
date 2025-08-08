@@ -216,7 +216,7 @@
                 this.currentTab = 'home';
                 this.showEventModal = false;
                 this.showSettingsModal = false;
-                this.showNotificationsModal = false;
+
                 this.editingEvent = null;
                 this.isDark = storage.get('darkMode', true);
                 this.backgroundImage = storage.get('backgroundImage', null);
@@ -331,6 +331,8 @@
                 this.isFormActive = false; // Деактивируем форму
                 this.render();
             }
+
+
 
             editEvent() {
                 if (!this.eventForm.title || !this.eventForm.date) return;
@@ -724,36 +726,22 @@
 
                             <!-- Нижняя навигация -->
                             <div class="border-t border-purple-500/30 ${cardClasses} backdrop-blur-lg safe-area-inset-bottom">
-                                <div class="flex items-center justify-between px-4 py-3 relative">
-                                    <!-- Левые вкладки -->
+                                <div class="flex items-center justify-around py-3">
                                     ${[
                                         { id: 'home', icon: 'home', label: 'Главная' },
-                                        { id: 'events', icon: 'list', label: 'События' }
-                                    ].map(tab => `
-                                        <button onclick="app.currentTab = '${tab.id}'; app.render();" class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 ${this.currentTab === tab.id ? 'text-purple-400 bg-purple-500/20' : 'text-gray-400 hover:text-purple-300'}">
-                                            <i data-lucide="${tab.icon}" class="w-5 h-5"></i>
-                                            <span class="text-xs font-medium">${tab.label}</span>
-                                        </button>
-                                    `).join('')}
-
-                                    <!-- Центральная кнопка уведомлений -->
-                                    <button onclick="app.toggleNotificationsModal()" class="relative w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 -mt-8">
-                                        <i data-lucide="bell" class="w-6 h-6"></i>
-                                        ${this.getUnreadNotificationsCount() > 0 ? `
-                                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold border-2 border-white animate-pulse">
-                                                ${this.getUnreadNotificationsCount()}
-                                            </span>
-                                        ` : ''}
-                                    </button>
-
-                                    <!-- Правые вкладки -->
-                                    ${[
+                                        { id: 'events', icon: 'list', label: 'События' },
+                                        { id: 'notifications', icon: 'bell', label: 'Уведомления' },
                                         { id: 'calendar', icon: 'calendar', label: 'Календарь' },
                                         { id: 'photos', icon: 'image', label: 'Фото' }
                                     ].map(tab => `
-                                        <button onclick="app.currentTab = '${tab.id}'; app.render();" class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 ${this.currentTab === tab.id ? 'text-purple-400 bg-purple-500/20' : 'text-gray-400 hover:text-purple-300'}">
+                                        <button onclick="app.currentTab = '${tab.id}'; app.render();" class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 relative ${this.currentTab === tab.id ? 'text-purple-400 bg-purple-500/20' : 'text-gray-400 hover:text-purple-300'}">
                                             <i data-lucide="${tab.icon}" class="w-5 h-5"></i>
                                             <span class="text-xs font-medium">${tab.label}</span>
+                                            ${tab.id === 'notifications' && this.getUnreadNotificationsCount() > 0 ? `
+                                                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold animate-pulse">
+                                                    ${this.getUnreadNotificationsCount()}
+                                                </span>
+                                            ` : ''}
                                         </button>
                                     `).join('')}
                                 </div>
@@ -962,6 +950,156 @@
                                         </label>
                                     </div>
                                 `}
+                            </div>
+                        `;
+
+                    case 'notifications':
+                        return `
+                            <div class="p-4 space-y-4 overflow-y-auto h-full pb-20">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-xl font-bold flex items-center gap-2">
+                                        <i data-lucide="bell" class="w-6 h-6 text-purple-400"></i>
+                                        Уведомления ${this.getUnreadNotificationsCount() > 0 ? `(${this.getUnreadNotificationsCount()})` : ''}
+                                    </h2>
+                                </div>
+
+                                <div class="space-y-4">
+                                    ${!('Notification' in window) ? `
+                                        <div class="p-4 rounded-xl bg-orange-500/20 border border-orange-400/30 ${cardClasses}">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-orange-300">Уведомления недоступны</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Ваш браузер не поддерживает push-уведомления</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : Notification.permission === 'default' ? `
+                                        <div class="p-4 rounded-xl bg-blue-500/20 border border-blue-400/30 ${cardClasses}">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="info" class="w-5 h-5 text-blue-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-blue-300">Разрешите уведомления</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, нажмите "Разрешить"</p>
+                                                    <div class="flex gap-2 mt-3">
+                                                        <button onclick="app.requestNotificationPermission()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                                                            Разрешить уведомления
+                                                        </button>
+                                                        <button onclick="app.testNotification()" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors">
+                                                            Тест
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : Notification.permission === 'granted' ? `
+                                        <div class="p-4 rounded-xl bg-green-500/20 border border-green-400/30 ${cardClasses}">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5"></i>
+                                                <div class="flex-1">
+                                                    <h4 class="font-semibold text-green-300">Уведомления разрешены ✅</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Вы будете получать уведомления о предстоящих событиях</p>
+                                                </div>
+                                                <button onclick="app.testNotification()" class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
+                                                    Тест
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ` : Notification.permission === 'denied' ? `
+                                        <div class="p-4 rounded-xl bg-red-500/20 border border-red-400/30 ${cardClasses}">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-red-300">Уведомления заблокированы</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Разрешите уведомления в настройках браузера для получения напоминаний</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Настройки уведомлений -->
+                                    <div class="p-4 rounded-xl border ${cardClasses} backdrop-blur-lg">
+                                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                                            <i data-lucide="settings" class="w-5 h-5 text-purple-400"></i>
+                                            Настройки уведомлений
+                                        </h4>
+                                        
+                                        <div class="flex items-center justify-between mb-4 p-3 rounded-lg ${this.isDark ? 'bg-gray-800/50' : 'bg-purple-50/50'}">
+                                            <span class="text-sm font-medium">Включить уведомления</span>
+                                            <button onclick="app.toggleNotifications()" class="relative inline-flex items-center w-11 h-6 rounded-full transition-colors ${this.notificationsEnabled ? 'bg-purple-500' : 'bg-gray-400'}">
+                                                <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${this.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}"></span>
+                                            </button>
+                                        </div>
+
+                                        <div class="space-y-2 text-sm ${this.notificationsEnabled ? 'opacity-80' : 'opacity-40'}">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
+                                                <span>За 3 дня до события</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
+                                                <span>За 1 день до события</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
+                                                <span>В день события</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Список уведомлений -->
+                                    ${this.activeNotifications.length === 0 ? `
+                                        <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg text-center">
+                                            <i data-lucide="bell-off" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                                            <h3 class="text-xl font-semibold mb-2">Нет уведомлений</h3>
+                                            <p class="opacity-70">${this.notificationsEnabled ? 'Уведомления появятся за 3 дня и 1 день до ваших событий' : 'Уведомления отключены в настройках'}</p>
+                                        </div>
+                                    ` : `
+                                        <div class="space-y-3">
+                                            <h3 class="text-lg font-semibold flex items-center gap-2">
+                                                <i data-lucide="inbox" class="w-5 h-5 text-purple-400"></i>
+                                                Активные уведомления (${this.activeNotifications.length})
+                                            </h3>
+                                            
+                                            ${this.activeNotifications
+                                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                                                .map(notification => `
+                                                    <div class="p-4 rounded-xl border ${notification.read ? 'bg-gray-500/10 border-gray-500/30' : 'bg-purple-500/20 border-purple-400/30'} ${cardClasses} transition-all">
+                                                        <div class="flex items-start gap-3">
+                                                            <div class="flex-1">
+                                                                <div class="flex items-center gap-2 mb-2">
+                                                                    ${notification.type === '3days' ? `<i data-lucide="calendar" class="w-4 h-4 text-orange-400"></i>` : 
+                                                                      notification.type === '1day' ? `<i data-lucide="clock" class="w-4 h-4 text-yellow-400"></i>` :
+                                                                      `<i data-lucide="bell-ring" class="w-4 h-4 text-red-400"></i>`}
+                                                                    <span class="text-sm font-semibold ${notification.read ? 'opacity-70' : ''}">${notification.eventTitle}</span>
+                                                                    ${!notification.read ? `<div class="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>` : ''}
+                                                                </div>
+                                                                <p class="text-sm ${notification.read ? 'opacity-50' : 'opacity-80'} mb-2">${notification.message}</p>
+                                                                <p class="text-xs opacity-50">
+                                                                    ${new Date(notification.createdAt).toLocaleDateString('ru-RU', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                            <div class="flex gap-2">
+                                                                ${!notification.read ? `
+                                                                    <button onclick="app.markNotificationAsRead('${notification.id}')" class="p-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors" title="Отметить как прочитанное">
+                                                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                                                    </button>
+                                                                ` : ''}
+                                                                <button onclick="app.deleteNotification('${notification.id}')" class="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors" title="Удалить уведомление">
+                                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                        </div>
+                                    `}
+                                </div>
                             </div>
                         `;
 
@@ -1198,152 +1336,7 @@
                     `;
                 }
 
-                // Модальное окно уведомлений
-                if (this.showNotificationsModal) {
-                    modals += `
-                        <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                            <div class="w-full max-w-md max-h-[80vh] overflow-hidden p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                <div class="flex items-center justify-between mb-6">
-                                    <h3 class="text-xl font-bold flex items-center gap-2">
-                                        <i data-lucide="bell" class="w-6 h-6 text-purple-400"></i>
-                                        Уведомления
-                                    </h3>
-                                    <button onclick="app.toggleNotificationsModal()" class="p-2 rounded-full hover:bg-purple-500/20 transition-colors">
-                                        <i data-lucide="x" class="w-5 h-5"></i>
-                                    </button>
-                                </div>
 
-                                <div class="space-y-4 overflow-y-auto max-h-96">
-                                    ${!('Notification' in window) ? `
-                                        <div class="p-4 rounded-xl bg-orange-500/20 border border-orange-400/30">
-                                            <div class="flex items-start gap-3">
-                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400 mt-0.5"></i>
-                                                <div>
-                                                    <h4 class="font-semibold text-orange-300">Уведомления недоступны</h4>
-                                                    <p class="text-sm opacity-80 mt-1">Ваш браузер не поддерживает push-уведомления</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ` : Notification.permission === 'default' ? `
-                                        <div class="p-4 rounded-xl bg-blue-500/20 border border-blue-400/30">
-                                            <div class="flex items-start gap-3">
-                                                <i data-lucide="info" class="w-5 h-5 text-blue-400 mt-0.5"></i>
-                                                <div>
-                                                    <h4 class="font-semibold text-blue-300">Разрешите уведомления</h4>
-                                                    <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, нажмите "Разрешить"</p>
-                                                    <button onclick="app.requestNotificationPermission()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
-                                                        Разрешить уведомления
-                                                    </button>
-                                                    <button onclick="app.testNotification()" class="mt-2 px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors ml-2">
-                                                        Тест
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ` : Notification.permission === 'granted' ? `
-                                        <div class="p-4 rounded-xl bg-green-500/20 border border-green-400/30">
-                                            <div class="flex items-start gap-3">
-                                                <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5"></i>
-                                                <div>
-                                                    <h4 class="font-semibold text-green-300">Уведомления разрешены</h4>
-                                                    <p class="text-sm opacity-80 mt-1">Вы будете получать уведомления о предстоящих событиях</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ` : ''}
-
-                                    ${Notification.permission === 'denied' ? `
-                                        <div class="p-4 rounded-xl bg-red-500/20 border border-red-400/30">
-                                            <div class="flex items-start gap-3">
-                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 mt-0.5"></i>
-                                                <div>
-                                                    <h4 class="font-semibold text-red-300">Уведомления заблокированы</h4>
-                                                    <p class="text-sm opacity-80 mt-1">Разрешите уведомления в настройках браузера для получения напоминаний</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ` : ''}
-
-                                    ${this.activeNotifications.length === 0 ? `
-                                        <div class="text-center py-8">
-                                            <i data-lucide="bell-off" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
-                                            <h4 class="text-lg font-semibold mb-2">Нет уведомлений</h4>
-                                            <p class="text-sm opacity-70">${this.notificationsEnabled ? 'Уведомления появятся за 3 дня и 1 день до ваших событий' : 'Уведомления отключены в настройках'}</p>
-                                        </div>
-                                    ` : `
-                                        <div class="space-y-3">
-                                            ${this.activeNotifications
-                                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                                                .map(notification => `
-                                                    <div class="p-3 rounded-xl border ${notification.read ? 'bg-gray-500/10 border-gray-500/30' : 'bg-purple-500/20 border-purple-400/30'} transition-all">
-                                                        <div class="flex items-start gap-3">
-                                                            <div class="flex-1">
-                                                                <div class="flex items-center gap-2 mb-1">
-                                                                    ${notification.type === '3days' ? `<i data-lucide="calendar" class="w-4 h-4 text-orange-400"></i>` : 
-                                                                      notification.type === '1day' ? `<i data-lucide="clock" class="w-4 h-4 text-yellow-400"></i>` :
-                                                                      `<i data-lucide="bell-ring" class="w-4 h-4 text-red-400"></i>`}
-                                                                    <span class="text-sm font-medium ${notification.read ? 'opacity-70' : ''}">${notification.eventTitle}</span>
-                                                                    ${!notification.read ? `<div class="w-2 h-2 bg-purple-400 rounded-full"></div>` : ''}
-                                                                </div>
-                                                                <p class="text-sm ${notification.read ? 'opacity-50' : 'opacity-80'}">${notification.message}</p>
-                                                                <p class="text-xs opacity-50 mt-1">
-                                                                    ${new Date(notification.createdAt).toLocaleDateString('ru-RU', {
-                                                                        day: 'numeric',
-                                                                        month: 'short',
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit'
-                                                                    })}
-                                                                </p>
-                                                            </div>
-                                                            <div class="flex flex-col gap-1">
-                                                                ${!notification.read ? `
-                                                                    <button onclick="app.markNotificationAsRead('${notification.id}')" class="p-1.5 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors">
-                                                                        <i data-lucide="check" class="w-3 h-3"></i>
-                                                                    </button>
-                                                                ` : ''}
-                                                                <button onclick="app.deleteNotification('${notification.id}')" class="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors">
-                                                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                `).join('')}
-                                        </div>
-                                    `}
-
-                                    <div class="pt-4 border-t border-purple-500/30">
-                                        <h4 class="font-semibold mb-3 flex items-center gap-2">
-                                            <i data-lucide="settings" class="w-5 h-5 text-purple-400"></i>
-                                            Настройки уведомлений
-                                        </h4>
-                                        
-                                        <div class="flex items-center justify-between mb-4 p-3 rounded-lg ${this.isDark ? 'bg-gray-800/50' : 'bg-purple-50/50'}">
-                                            <span class="text-sm font-medium">Включить уведомления</span>
-                                            <button onclick="app.toggleNotifications()" class="relative inline-flex items-center w-11 h-6 rounded-full transition-colors ${this.notificationsEnabled ? 'bg-purple-500' : 'bg-gray-400'}">
-                                                <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${this.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}"></span>
-                                            </button>
-                                        </div>
-
-                                        <div class="space-y-2 text-sm ${this.notificationsEnabled ? 'opacity-80' : 'opacity-40'}">
-                                            <div class="flex items-center gap-2">
-                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
-                                                <span>За 3 дня до события</span>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
-                                                <span>За 1 день до события</span>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i data-lucide="${this.notificationsEnabled ? 'check-circle' : 'x-circle'}" class="w-4 h-4 ${this.notificationsEnabled ? 'text-green-400' : 'text-gray-400'}"></i>
-                                                <span>В день события</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
 
                 return modals;
             }
@@ -1358,29 +1351,7 @@
                 this.render();
             }
 
-            closeNotificationsModal() {
-                this.showNotificationsModal = false;
-                this.render();
-            }
 
-            openNotificationsModal() {
-                this.showNotificationsModal = true;
-                this.render();
-            }
-
-            toggleNotificationsModal() {
-                this.showNotificationsModal = !this.showNotificationsModal;
-                this.render();
-                
-                // Если модальное окно открывается, запрашиваем разрешения
-                if (this.showNotificationsModal) {
-                    setTimeout(() => {
-                        if ('Notification' in window && Notification.permission === 'default') {
-                            this.requestNotificationPermission();
-                        }
-                    }, 300);
-                }
-            }
 
             startEditEvent(eventId) {
                 const event = this.events.find(e => e.id == eventId);
@@ -1459,7 +1430,7 @@
                         requireInteraction: false
                     });
                 } else if (Notification.permission === 'default') {
-                    alert('Сначала разрешите уведомления в браузере!');
+                    this.requestNotificationPermission();
                 } else {
                     alert('Уведомления заблокированы в настройках браузера. Разблокируйте их вручную.');
                 }
