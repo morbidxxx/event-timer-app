@@ -714,14 +714,6 @@
                                     <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="image" class="w-5 h-5"></i>
                                     </button>
-                                    <button onclick="app.toggleNotificationsModal()" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
-                                        <i data-lucide="bell" class="w-5 h-5"></i>
-                                        ${this.getUnreadNotificationsCount() > 0 ? `
-                                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                                ${this.getUnreadNotificationsCount()}
-                                            </span>
-                                        ` : ''}
-                                    </button>
                                 </div>
                             </div>
 
@@ -732,10 +724,30 @@
 
                             <!-- Нижняя навигация -->
                             <div class="border-t border-purple-500/30 ${cardClasses} backdrop-blur-lg safe-area-inset-bottom">
-                                <div class="flex items-center justify-around py-3">
+                                <div class="flex items-center justify-between px-4 py-3 relative">
+                                    <!-- Левые вкладки -->
                                     ${[
                                         { id: 'home', icon: 'home', label: 'Главная' },
-                                        { id: 'events', icon: 'list', label: 'События' },
+                                        { id: 'events', icon: 'list', label: 'События' }
+                                    ].map(tab => `
+                                        <button onclick="app.currentTab = '${tab.id}'; app.render();" class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 ${this.currentTab === tab.id ? 'text-purple-400 bg-purple-500/20' : 'text-gray-400 hover:text-purple-300'}">
+                                            <i data-lucide="${tab.icon}" class="w-5 h-5"></i>
+                                            <span class="text-xs font-medium">${tab.label}</span>
+                                        </button>
+                                    `).join('')}
+
+                                    <!-- Центральная кнопка уведомлений -->
+                                    <button onclick="app.toggleNotificationsModal()" class="relative w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 -mt-8">
+                                        <i data-lucide="bell" class="w-6 h-6"></i>
+                                        ${this.getUnreadNotificationsCount() > 0 ? `
+                                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold border-2 border-white animate-pulse">
+                                                ${this.getUnreadNotificationsCount()}
+                                            </span>
+                                        ` : ''}
+                                    </button>
+
+                                    <!-- Правые вкладки -->
+                                    ${[
                                         { id: 'calendar', icon: 'calendar', label: 'Календарь' },
                                         { id: 'photos', icon: 'image', label: 'Фото' }
                                     ].map(tab => `
