@@ -571,15 +571,18 @@
             }
 
             getUnreadNotificationsCount() {
-                return this.activeNotifications.filter(n => !n.read).length;
+                try {
+                    return this.activeNotifications ? this.activeNotifications.filter(n => !n.read).length : 0;
+                } catch (error) {
+                    console.error('Ошибка подсчета уведомлений:', error);
+                    return 0;
+                }
             }
 
-            async requestNotificationPermission() {
-                try {
-                    if ('Notification' in window && Notification.permission === 'default') {
-                        const permission = await Notification.requestPermission();
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
-                            // Показываем тестовое уведомление
                             try {
                                 new Notification('Event Timer', {
                                     body: 'Уведомления успешно включены!',
@@ -590,10 +593,10 @@
                             }
                         }
                         this.render();
-                    }
-                } catch (error) {
-                    console.error('Ошибка запроса разрешения на уведомления:', error);
-                    this.render();
+                    }).catch(error => {
+                        console.error('Ошибка запроса разрешения:', error);
+                        this.render();
+                    });
                 }
             }
 
@@ -703,7 +706,7 @@
                                     <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="image" class="w-5 h-5"></i>
                                     </button>
-                                    <button onclick="try { app.openNotificationsModal(); } catch(e) { console.error('Ошибка кнопки уведомлений:', e); }" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                    <button onclick="app.showNotificationsModal = true; app.render();" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="bell" class="w-5 h-5"></i>
                                         ${this.getUnreadNotificationsCount() > 0 ? `
                                             <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -1338,21 +1341,15 @@
             }
 
             openNotificationsModal() {
-                try {
-                    this.showNotificationsModal = true;
-                    this.render();
-                    
-                    // Автоматически запрашиваем разрешения если они не настроены (с задержкой)
-                    setTimeout(() => {
-                        if ('Notification' in window && Notification.permission === 'default') {
-                            this.requestNotificationPermission();
-                        }
-                    }, 100);
-                } catch (error) {
-                    console.error('Ошибка открытия модального окна уведомлений:', error);
-                    this.showNotificationsModal = false;
-                    this.render();
-                }
+                this.showNotificationsModal = true;
+                this.render();
+                
+                // Автоматически запрашиваем разрешения если они не настроены
+                setTimeout(() => {
+                    if ('Notification' in window && Notification.permission === 'default') {
+                        this.requestNotificationPermission();
+                    }
+                }, 200);
             }
 
             startEditEvent(eventId) {
