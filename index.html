@@ -547,7 +547,7 @@
                     // Показываем браузерное уведомление если разрешено
                     if (Notification.permission === 'granted') {
                         newNotifications.forEach(notification => {
-                            new Notification('MX Напоминалка', {
+                            new Notification('Event Timer', {
                                 body: notification.message,
                                 icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B5CF6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
                             });
@@ -574,9 +574,17 @@
                 return this.activeNotifications.filter(n => !n.read).length;
             }
 
-            requestNotificationPermission() {
+            async requestNotificationPermission() {
                 if ('Notification' in window && Notification.permission === 'default') {
-                    Notification.requestPermission();
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        // Показываем тестовое уведомление
+                        new Notification('Event Timer', {
+                            body: 'Уведомления успешно включены!',
+                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B5CF6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
+                        });
+                    }
+                    this.render();
                 }
             }
 
@@ -675,7 +683,7 @@
                                 <div class="flex items-center gap-3">
                                     <i data-lucide="clock" class="w-8 h-8 text-purple-400"></i>
                                     <h1 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                                        MX Напоминалка
+                                        Event Timer
                                     </h1>
                                 </div>
                                 
@@ -686,7 +694,7 @@
                                     <button onclick="app.currentTab = 'photos'; app.render();" class="p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="image" class="w-5 h-5"></i>
                                     </button>
-                                    <button onclick="app.showNotificationsModal = true; app.requestNotificationPermission(); app.render();" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
+                                    <button onclick="app.openNotificationsModal()" class="relative p-2 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
                                         <i data-lucide="bell" class="w-5 h-5"></i>
                                         ${this.getUnreadNotificationsCount() > 0 ? `
                                             <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -741,7 +749,7 @@
                         return `
                             <div class="p-4 space-y-6 overflow-y-auto h-full pb-20">
                                 <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                    <h2 class="text-2xl font-bold mb-2">ДиманаЧ! 👋</h2>
+                                    <h2 class="text-2xl font-bold mb-2">Добро пожаловать! 👋</h2>
                                     <p class="opacity-80">У вас ${this.events.length} событий, ${upcomingEvents.length} предстоящих</p>
                                 </div>
 
@@ -1143,6 +1151,11 @@
                                         <button onclick="app.closeEventModal()" class="flex-1 py-3 px-4 rounded-xl border border-gray-500 text-gray-400 hover:bg-gray-500/10 transition-colors">
                                             Отмена
                                         </button>
+                                        ${this.editingEvent ? `
+                                            <button onclick="app.deleteCurrentEvent()" class="px-4 py-3 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 transition-colors">
+                                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                            </button>
+                                        ` : ''}
                                         <button onclick="app.saveEvent()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl">
                                             ${this.editingEvent ? 'Сохранить' : 'Создать'}
                                         </button>
@@ -1169,16 +1182,36 @@
                                 </div>
 
                                 <div class="space-y-4 overflow-y-auto max-h-96">
-                                    ${Notification.permission === 'default' ? `
+                                    ${!('Notification' in window) ? `
+                                        <div class="p-4 rounded-xl bg-orange-500/20 border border-orange-400/30">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-orange-300">Уведомления недоступны</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Ваш браузер не поддерживает push-уведомления</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : Notification.permission === 'default' ? `
                                         <div class="p-4 rounded-xl bg-blue-500/20 border border-blue-400/30">
                                             <div class="flex items-start gap-3">
                                                 <i data-lucide="info" class="w-5 h-5 text-blue-400 mt-0.5"></i>
                                                 <div>
                                                     <h4 class="font-semibold text-blue-300">Разрешите уведомления</h4>
-                                                    <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, разрешите их в браузере</p>
+                                                    <p class="text-sm opacity-80 mt-1">Чтобы получать уведомления о предстоящих событиях, нажмите "Разрешить"</p>
                                                     <button onclick="app.requestNotificationPermission()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
-                                                        Разрешить
+                                                        Разрешить уведомления
                                                     </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : Notification.permission === 'granted' ? `
+                                        <div class="p-4 rounded-xl bg-green-500/20 border border-green-400/30">
+                                            <div class="flex items-start gap-3">
+                                                <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5"></i>
+                                                <div>
+                                                    <h4 class="font-semibold text-green-300">Уведомления разрешены</h4>
+                                                    <p class="text-sm opacity-80 mt-1">Вы будете получать уведомления о предстоящих событиях</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1295,6 +1328,15 @@
                 this.render();
             }
 
+            openNotificationsModal() {
+                this.showNotificationsModal = true;
+                // Автоматически запрашиваем разрешения если они не настроены
+                if ('Notification' in window && Notification.permission === 'default') {
+                    this.requestNotificationPermission();
+                }
+                this.render();
+            }
+
             startEditEvent(eventId) {
                 const event = this.events.find(e => e.id == eventId);
                 if (event) {
@@ -1353,6 +1395,13 @@
                     this.editEvent();
                 } else {
                     this.addEvent();
+                }
+            }
+
+            deleteCurrentEvent() {
+                if (this.editingEvent && confirm('Вы уверены, что хотите удалить это событие?')) {
+                    this.deleteEvent(this.editingEvent.id);
+                    this.closeEventModal();
                 }
             }
 
