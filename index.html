@@ -431,7 +431,7 @@
                         const advanceDate = new Date(year, month, 15, 9, 0); // 09:00
                         staticEvents.push({
                             id: `advance-${year}-${month}`,
-                            title: 'Аванс 💰',
+                            title: 'Зарплатка 💰',
                             dateTime: advanceDate.toISOString(),
                             description: 'Аванс по заработной плате',
                             color: '#10B981', // Зеленый
@@ -445,7 +445,7 @@
                         const salaryDate = new Date(year, month, salaryDay, 17, 0); // 17:00
                         staticEvents.push({
                             id: `salary-${year}-${month}`,
-                            title: 'Зарплата 💸',
+                            title: 'АВАНС 💸',
                             dateTime: salaryDate.toISOString(),
                             description: 'Выплата заработной платы',
                             color: '#F59E0B', // Оранжевый
@@ -769,7 +769,7 @@
                         return `
                             <div class="p-4 space-y-6 overflow-y-auto h-full pb-20">
                                 <div class="p-6 rounded-2xl border ${cardClasses} backdrop-blur-lg">
-                                    <h2 class="text-2xl font-bold mb-2">Добро пожаловать! 👋</h2>
+                                    <h2 class="text-2xl font-bold mb-2">Morbidx!, 👋</h2>
                                     <p class="opacity-80">У вас ${this.events.length} событий, ${upcomingEvents.length} предстоящих</p>
                                 </div>
 
